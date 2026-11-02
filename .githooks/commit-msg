@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# commit-msg hook — spec-impact gate, local mirror of .github/workflows/spec-impact.yml.
+# Checks the branch diff (merge-base with origin/main, or local main with no remote) plus the staged index.
+# Warns only (never blocks): the PR may fix a gap in a later commit. CI fails the PR on every rule;
+# only the missing-spec rule can be waived, by the reviewer adding the `no-spec-change` label.
+set -euo pipefail
+
+base="origin/main"
+if ! git rev-parse -q --verify "$base^{commit}" >/dev/null; then
+  base="main"
+fi
+# No base at all (e.g. the very first commit): the gate treats every staged file as added.
+exec bash "$(git rev-parse --show-toplevel)/.githooks/check_spec_impact.sh" --base "$base" --staged

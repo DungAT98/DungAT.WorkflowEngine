@@ -1,0 +1,88 @@
+<div x-data="overviewPage">
+  <div class="page-head">
+    <div class="titles">
+      <h1>Overview</h1>
+      <p>Live view of every workflow running in your application.</p>
+    </div>
+    <div class="actions">
+      <span class="muted" x-show="stats" style="font-size:12.5px">Updates every 5 seconds</span>
+    </div>
+  </div>
+
+  <template x-if="error">
+    <div class="notice danger" x-text="error"></div>
+  </template>
+
+  <template x-if="loading">
+    <div class="stack">
+      <div class="grid cols-4"><template x-for="n in 4"><div class="card skeleton sk-card"></div></template></div>
+      <div class="card skeleton" style="height:220px"></div>
+    </div>
+  </template>
+
+  <template x-if="stats">
+    <div class="stack">
+      <div class="grid cols-4">
+        <div class="card stat"><div class="label">Instances</div><div class="value" x-text="stats.totalInstances.toLocaleString()"></div><div class="sub">across all workflows</div></div>
+        <div class="card stat"><div class="label">In progress</div><div class="value" x-text="stats.activeInstances.toLocaleString()"></div><div class="sub">not yet finished</div></div>
+        <div class="card stat"><div class="label">Finished</div><div class="value" x-text="stats.finishedInstances.toLocaleString()"></div><div class="sub">reached a final state</div></div>
+        <div class="card stat"><div class="label">Commands · 24h</div><div class="value" x-text="stats.commandsLast24Hours.toLocaleString()"></div><div class="sub"><span x-text="stats.commandsLast7Days.toLocaleString()"></span> in the last 7 days</div></div>
+      </div>
+
+      <div class="two-col">
+        <section class="card">
+          <div class="card-head"><h2>Instances by state</h2><a href="#/instances">View all</a></div>
+          <template x-if="stats.definitions.length === 0">
+            <div class="empty"><h2>No workflows yet</h2><p class="muted">Define a workflow to get started.</p>
+              <a class="btn primary" href="#/definitions" x-show="!$store.app.meta.readOnly">Go to workflows</a></div>
+          </template>
+          <div class="bars">
+            <template x-for="def in stats.definitions" :key="def.code">
+              <div>
+                <div class="bar-head">
+                  <a :href="'#/instances?definition=' + encodeURIComponent(def.code)"><strong x-text="def.name"></strong></a>
+                  <span class="chip" x-text="'v' + def.version"></span>
+                  <span class="total" x-text="fmt.plural(def.total, 'instance')"></span>
+                </div>
+                <div class="bar" role="img" :aria-label="def.name + ' state distribution'">
+                  <template x-if="def.total === 0"><i style="flex:1;background:transparent"></i></template>
+                  <template x-for="s in def.states.filter(x => x.count > 0)" :key="s.code">
+                    <i :class="fmt.typeClass(s.type)" :style="'flex:' + s.count" :title="s.name + ': ' + s.count"></i>
+                  </template>
+                </div>
+                <div class="legend">
+                  <template x-for="s in def.states" :key="s.code">
+                    <span :class="fmt.typeClass(s.type)"><em x-text="s.name"></em><b x-text="s.count"></b></span>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><h2>Recent activity</h2></div>
+          <template x-if="activity.length === 0">
+            <div class="empty"><p class="muted">Nothing has happened yet.</p></div>
+          </template>
+          <ul class="feed">
+            <template x-for="a in activity" :key="a.entry.id">
+              <li @click="open(a)" tabindex="0" @keydown.enter="open(a)">
+                <span class="dot" :class="a.entry.commandCode === 'START' ? 't-initial' : ''"></span>
+                <div class="body">
+                  <div class="line"><span x-text="a.entityType"></span> <span class="mono" x-text="'#' + a.entityId"></span></div>
+                  <div class="meta">
+                    <span class="chip" x-text="a.entry.commandCode"></span>
+                    <template x-if="a.entry.fromStateCode"><span><span x-text="a.entry.fromStateCode"></span><span class="arrow">→</span></span></template>
+                    <strong x-text="a.entry.toStateCode"></strong> · <span x-text="a.entry.executedBy"></span>
+                  </div>
+                </div>
+                <time :datetime="a.entry.executedAt" :title="fmt.dateTime(a.entry.executedAt)" x-text="fmt.ago(a.entry.executedAt)"></time>
+              </li>
+            </template>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </template>
+</div>

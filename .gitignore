@@ -1,0 +1,10 @@
+bin/
+obj/
+/packages/
+riderModule.iml
+/_ReSharper.Caches/
+/artifacts/
+.tags
+.claude/logs/
+.claude/settings.local.json
+.idea/

@@ -1,0 +1,162 @@
+<div x-data="editorPage">
+  <template x-if="error">
+    <div class="stack"><div class="notice danger" x-text="error"></div><a class="btn" href="#/definitions" style="align-self:flex-start">Back to workflows</a></div>
+  </template>
+  <template x-if="loading"><div class="card skeleton" style="height:360px"></div></template>
+
+  <template x-if="ready">
+    <div>
+      <div class="page-head">
+        <div class="titles">
+          <div class="crumbs"><a href="#/definitions">Workflows</a> / <span x-text="isNew ? 'New' : form.code"></span></div>
+          <h1 x-text="isNew ? 'New workflow' : 'Edit ' + (form.name || form.code)"></h1>
+          <p x-text="isNew ? 'Define the states, then the commands that move between them.' : 'Publishing creates version ' + (baseVersion + 1) + '. Running instances stay on the version they started on.'"></p>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="stack">
+          <section class="card card-pad">
+            <h2 style="margin-bottom:14px">General</h2>
+            <div class="form-grid">
+              <label class="field"><span>Code <span class="hint">(unique, cannot change later)</span></span>
+                <input x-model="form.code" :disabled="!isNew" placeholder="LEAVE_REQUEST" autocomplete="off" spellcheck="false"></label>
+              <label class="field"><span>Name</span><input x-model="form.name" placeholder="Leave request"></label>
+              <label class="field"><span>Entity type <span class="hint">(links instances to your own table)</span></span>
+                <select x-model="form.entityType">
+                  <option value="" :selected="!form.entityType">None</option>
+                  <template x-for="e in entities" :key="e"><option :value="e" :selected="e === form.entityType" x-text="e"></option></template>
+                </select></label>
+              <label class="field wide"><span>Description <span class="hint">(optional)</span></span><textarea rows="2" x-model="form.description"></textarea></label>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head"><h2>States</h2><button class="btn sm" @click="addState()">Add state</button></div>
+            <div class="row-labels state"><span>Code</span><span>Name</span><span>Type</span><span></span></div>
+            <div class="rows">
+              <template x-for="(s, i) in form.states" :key="s.uid">
+                <div class="state-block">
+                <div class="row state">
+                  <input x-model="s.code" placeholder="DRAFT" aria-label="State code" spellcheck="false">
+                  <input x-model="s.name" placeholder="Draft" aria-label="State name">
+                  <select x-model="s.type" aria-label="State type">
+                    <option value="Initial">Initial</option><option value="Intermediate">Intermediate</option><option value="Final">Final</option>
+                  </select>
+                  <div class="actions" style="gap:0">
+                    <button class="icon-btn" @click="move(i, -1)" :disabled="i === 0" title="Move up" aria-label="Move up">↑</button>
+                    <button class="icon-btn" @click="move(i, 1)" :disabled="i === form.states.length - 1" title="Move down" aria-label="Move down">↓</button>
+                  </div>
+                  <button class="icon-btn danger" @click="removeState(i)" title="Remove state" aria-label="Remove state">✕</button>
+                </div>
+                <div class="chips on-enter" x-show="postActions.length || s.postActions.length">
+                  <span class="muted">When entered, run:</span>
+                  <template x-for="a in s.postActions" :key="a"><span class="chip primary"><span x-text="a"></span><button @click="s.postActions = s.postActions.filter(x => x !== a)" aria-label="Remove post action">✕</button></span></template>
+                  <select style="width:auto;padding:3px 8px" x-show="available(postActions, s.postActions).length" @change="s.postActions.push($event.target.value); $event.target.value = ''">
+                    <option value="">+ Add post action</option>
+                    <template x-for="a in available(postActions, s.postActions)" :key="a"><option :value="a" x-text="a"></option></template>
+                  </select>
+                </div>
+                </div>
+              </template>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head"><h2>Transitions</h2><button class="btn sm" @click="addTransition()">Add transition</button></div>
+            <div class="rows">
+              <p class="muted" x-show="form.transitions.length === 0">No transitions yet. A transition says: in this state, this command moves it to that state.</p>
+              <template x-for="(t, i) in form.transitions" :key="t.uid">
+                <div class="trans">
+                  <div class="flow">
+                    <select x-model="t.fromUid" aria-label="From state">
+                      <option value="">From state…</option>
+                      <template x-for="s in form.states" :key="s.uid"><option :value="s.uid" :selected="s.uid === t.fromUid" x-text="s.name || s.code || '(unnamed)'"></option></template>
+                    </select>
+                    <span class="arrow">→</span>
+                    <input x-model="t.command" list="wf-commands" placeholder="Command, e.g. SUBMIT" aria-label="Command code" spellcheck="false">
+                    <span class="arrow">→</span>
+                    <select x-model="t.toUid" aria-label="To state">
+                      <option value="">To state…</option>
+                      <template x-for="s in form.states" :key="s.uid"><option :value="s.uid" :selected="s.uid === t.toUid" x-text="s.name || s.code || '(unnamed)'"></option></template>
+                    </select>
+                    <button class="icon-btn danger" @click="removeTransition(i)" title="Remove transition" aria-label="Remove transition">✕</button>
+                  </div>
+                  <div class="opts">
+                    <label class="field"><span>Allowed roles <span class="hint">(comma separated, empty = anyone)</span></span>
+                      <input x-model="t.roles" placeholder="Manager, Admin"></label>
+                    <div class="field"><span>Guards</span>
+                      <div class="chips">
+                        <template x-for="g in t.guards" :key="g"><span class="chip primary"><span x-text="g"></span><button @click="t.guards = t.guards.filter(x => x !== g)" aria-label="Remove guard">✕</button></span></template>
+                        <select style="width:auto;padding:3px 8px" x-show="available(guards, t.guards).length" @change="t.guards.push($event.target.value); $event.target.value = ''">
+                          <option value="">+ Add guard</option>
+                          <template x-for="g in available(guards, t.guards)" :key="g"><option :value="g" x-text="g"></option></template>
+                        </select>
+                        <span class="muted" x-show="!guards.length" style="font-size:12.5px" x-text="allGuards ? 'None for ' + (form.entityType || 'a workflow without an entity') : 'None registered in the app'"></span>
+                      </div>
+                    </div>
+                    <div class="field"><span>Effects</span>
+                      <div class="chips">
+                        <template x-for="e in t.effects" :key="e"><span class="chip primary"><span x-text="e"></span><button @click="t.effects = t.effects.filter(x => x !== e)" aria-label="Remove effect">✕</button></span></template>
+                        <select style="width:auto;padding:3px 8px" x-show="available(effects, t.effects).length" @change="t.effects.push($event.target.value); $event.target.value = ''">
+                          <option value="">+ Add effect</option>
+                          <template x-for="e in available(effects, t.effects)" :key="e"><option :value="e" x-text="e"></option></template>
+                        </select>
+                        <span class="muted" x-show="!effects.length" style="font-size:12.5px" x-text="allEffects ? 'None for ' + (form.entityType || 'a workflow without an entity') : 'None registered in the app'"></span>
+                      </div>
+                    </div>
+                    <div class="field"><span>After the transition <span class="hint">(post actions)</span></span>
+                      <div class="chips">
+                        <template x-for="a in t.postActions" :key="a"><span class="chip primary"><span x-text="a"></span><button @click="t.postActions = t.postActions.filter(x => x !== a)" aria-label="Remove post action">✕</button></span></template>
+                        <select style="width:auto;padding:3px 8px" x-show="available(postActions, t.postActions).length" @change="t.postActions.push($event.target.value); $event.target.value = ''">
+                          <option value="">+ Add post action</option>
+                          <template x-for="a in available(postActions, t.postActions)" :key="a"><option :value="a" x-text="a"></option></template>
+                        </select>
+                        <span class="muted" x-show="!postActions.length" style="font-size:12.5px" x-text="allPostActions ? 'None for ' + (form.entityType || 'a workflow without an entity') : 'None registered in the app'"></span>
+                      </div>
+                    </div>
+                    <label class="checkline" style="align-self:end;padding-bottom:8px"><input type="checkbox" x-model="t.requireComment"> Require a comment</label>
+                  </div>
+                </div>
+              </template>
+            </div>
+            <datalist id="wf-commands"><template x-for="c in commandCodes" :key="c"><option :value="c"></option></template></datalist>
+          </section>
+
+          <section class="card" x-show="commandCodes.length">
+            <div class="card-head"><h2>Command names</h2><span class="muted" style="font-size:13px">Shown on buttons</span></div>
+            <div class="rows">
+              <template x-for="c in commandCodes" :key="c">
+                <div class="row" style="grid-template-columns: 160px 1fr">
+                  <code x-text="c"></code>
+                  <input :value="form.commandNames[c] || ''" @input="form.commandNames[c] = $event.target.value" :placeholder="c" aria-label="Display name">
+                </div>
+              </template>
+            </div>
+          </section>
+        </div>
+
+        <div class="stack" style="position:sticky;top:16px">
+          <section class="card">
+            <div class="card-head"><h2>Preview</h2><span class="spinner muted" x-show="validating"></span></div>
+            <div class="diagram" x-html="svg"></div>
+          </section>
+          <section class="card card-pad">
+            <template x-if="errors.length === 0 && !validating && touched"><div class="notice ok">Looks good. Ready to publish.</div></template>
+            <template x-if="errors.length > 0">
+              <div class="notice danger"><strong x-text="fmt.plural(errors.length, 'problem')"></strong> to fix:
+                <ul><template x-for="e in errors" :key="e"><li x-text="e"></li></template></ul></div>
+            </template>
+            <p class="muted" x-show="!touched && errors.length === 0">Changes are checked as you type.</p>
+          </section>
+        </div>
+      </div>
+
+      <div class="sticky-bar">
+        <span class="muted grow" x-text="isNew ? 'Publishes version 1.' : 'Publishes version ' + (baseVersion + 1) + '.'"></span>
+        <a class="btn" :href="isNew ? '#/definitions' : '#/definitions/' + encodeURIComponent(form.code)">Cancel</a>
+        <button class="btn primary" :disabled="!canPublish" @click="publish()"><span class="spinner" x-show="saving"></span> Publish</button>
+      </div>
+    </div>
+  </template>
+</div>

@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // empty' | grep -qE '[.]cs$' && ctags --version 2>&1 | grep -q 'Universal Ctags' && ctags -R --languages=C# --fields=+nkz --exclude=obj --exclude=bin -f \"$CLAUDE_PROJECT_DIR/.tags\" \"$CLAUDE_PROJECT_DIR/src/\" 2>/dev/null || true",
+            "statusMessage": "Updating ctags index...",
+            "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/regen-arch-index.sh",
+            "statusMessage": "Regenerating architecture index...",
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}

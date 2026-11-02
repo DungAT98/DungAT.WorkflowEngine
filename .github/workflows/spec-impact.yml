@@ -1,0 +1,32 @@
+name: spec-impact
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  spec-impact-guard:
+    name: Spec impact guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      # `no-spec-change` only counts when someone other than the PR author added it.
+      - name: Check waiver label
+        id: waiver
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          waived=false
+          labeler=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/events" --paginate \
+            --jq '[.[] | select(.event == "labeled" and .label.name == "no-spec-change")] | last | .actor.login // empty')
+          has_label=${{ contains(github.event.pull_request.labels.*.name, 'no-spec-change') }}
+          if [[ "$has_label" == "true" && -n "$labeler" && "$labeler" != "$PR_AUTHOR" ]]; then waived=true; fi
+          echo "waived=$waived" >> "$GITHUB_OUTPUT"
+      - name: Spec impact gate
+        run: |
+          flags=""
+          [[ "${{ steps.waiver.outputs.waived }}" == "true" ]] && flags="--waived"
+          bash .githooks/check_spec_impact.sh --base "origin/${{ github.base_ref }}" $flags

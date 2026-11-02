@@ -1,0 +1,89 @@
+<div x-data="instancePage">
+  <template x-if="error">
+    <div class="stack"><div class="notice danger" x-text="error"></div><a class="btn" href="#/instances" style="align-self:flex-start">Back to instances</a></div>
+  </template>
+  <template x-if="loading"><div class="stack"><div class="skeleton" style="height:56px"></div><div class="card skeleton" style="height:280px"></div></div></template>
+
+  <template x-if="detail">
+    <div class="stack">
+      <div class="page-head" style="margin-bottom:0">
+        <div class="titles">
+          <div class="crumbs"><a href="#/instances">Instances</a> / <span x-text="inst.entityType + ' #' + inst.entityId"></span></div>
+          <h1><span x-text="inst.entityType"></span> <span class="mono" x-text="'#' + inst.entityId"></span></h1>
+          <div class="chips" style="margin-top:10px">
+            <span class="pill" :class="fmt.typeClass(inst.stateType)" x-text="inst.currentStateName"></span>
+            <a class="chip primary" :href="'#/definitions/' + encodeURIComponent(inst.definitionCode) + '?version=' + inst.definitionVersion" x-text="detail.definition.name + ' · v' + inst.definitionVersion"></a>
+            <span class="chip success" x-show="inst.stateType === 'Final'">Finished</span>
+            <a class="chip" x-show="detail.entityUrl" :href="detail.entityUrl" target="_blank" rel="noopener" x-text="'Open ' + inst.entityType + ' ↗'"></a>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn" @click="refresh()" :disabled="busy"><span class="spinner" x-show="busy && !running"></span> Refresh</button>
+        </div>
+      </div>
+
+      <section class="card">
+        <div class="card-head"><h2>Actions</h2></div>
+        <div class="cmdbar">
+          <template x-for="c in detail.availableCommands" :key="c.code">
+            <button class="btn primary" :disabled="busy" @click="run(c)">
+              <span class="spinner" x-show="running === c.code"></span>
+              <span x-text="c.name"></span>
+              <span class="chip warn" x-show="needsComment(c)" style="background:rgba(255,255,255,.2);color:inherit">comment</span>
+            </button>
+          </template>
+          <span class="muted" x-show="detail.availableCommands.length === 0" x-text="emptyActionsText"></span>
+        </div>
+      </section>
+
+      <div class="two-col">
+        <div class="stack">
+          <section class="card">
+            <div class="card-head"><h2>Where it is</h2></div>
+            <div class="diagram" x-html="svg"></div>
+          </section>
+          <section class="card" x-show="detail.data">
+            <div class="card-head"><h2>Data</h2></div>
+            <pre class="json" x-text="prettyData"></pre>
+          </section>
+        </div>
+
+        <div class="stack">
+          <section class="card">
+            <div class="card-head"><h2>History</h2><span class="chip" x-text="detail.history.length"></span></div>
+            <ol class="timeline">
+              <template x-for="(h, idx) in historyNewestFirst" :key="h.id">
+                <li :class="{ latest: idx === 0 }">
+                  <div>
+                    <span class="chip" x-text="h.commandCode"></span>
+                    <template x-if="h.fromStateCode"><span><span x-text="stateName(h.fromStateCode)"></span><span class="arrow">→</span></span></template>
+                    <strong x-text="stateName(h.toStateCode)"></strong>
+                  </div>
+                  <div class="when"><span x-text="h.executedBy"></span> · <span :title="fmt.dateTime(h.executedAt)" x-text="fmt.ago(h.executedAt)"></span></div>
+                  <div class="quote" x-show="h.comment" x-text="h.comment"></div>
+                  <div class="chips" x-show="h.postActions.length" style="margin-top:8px">
+                    <template x-for="a in h.postActions" :key="a.name">
+                      <span class="chip" :class="a.succeeded ? 'success' : 'danger'" :title="a.succeeded ? a.durationMs + ' ms' : a.error">
+                        <span x-text="a.succeeded ? '✓' : '✗'"></span><span x-text="a.name"></span>
+                      </span>
+                    </template>
+                  </div>
+                </li>
+              </template>
+            </ol>
+          </section>
+
+          <section class="card">
+            <div class="card-head"><h2>Details</h2></div>
+            <dl class="kv">
+              <dt>Instance id</dt><dd class="mono" x-text="inst.id"></dd>
+              <dt>Started by</dt><dd x-text="inst.createdBy"></dd>
+              <dt>Started</dt><dd x-text="fmt.dateTime(inst.createdAt)"></dd>
+              <dt>Last update</dt><dd x-text="fmt.dateTime(inst.updatedAt)"></dd>
+            </dl>
+          </section>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>

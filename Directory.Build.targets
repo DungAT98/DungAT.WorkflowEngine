@@ -1,0 +1,14 @@
+<Project>
+  <!-- Points git at the repo's hooks (.githooks) the first time the repo is built locally. Skipped on CI and in git worktrees. -->
+  <PropertyGroup>
+    <_GitConfigFile>$(MSBuildThisFileDirectory).git/config</_GitConfigFile>
+  </PropertyGroup>
+  <Target Name="WireGitHooks"
+          BeforeTargets="BeforeBuild"
+          Condition="'$(CI)' != 'true' And Exists('$(_GitConfigFile)') And Exists('$(MSBuildThisFileDirectory).githooks/commit-msg')
+                     And !$([System.IO.File]::ReadAllText('$(_GitConfigFile)').Contains('hooksPath'))">
+    <!-- Parallel project builds can race for git's config lock; losing the race is harmless because the winner sets it. -->
+    <Exec Command="git config core.hooksPath .githooks" WorkingDirectory="$(MSBuildThisFileDirectory)"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" StandardOutputImportance="low" StandardErrorImportance="low" />
+  </Target>
+</Project>

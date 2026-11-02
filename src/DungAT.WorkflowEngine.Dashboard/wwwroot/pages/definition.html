@@ -1,0 +1,128 @@
+<div x-data="definitionPage">
+  <template x-if="error">
+    <div class="stack"><div class="notice danger" x-text="error"></div><a class="btn" href="#/definitions" style="align-self:flex-start">Back to workflows</a></div>
+  </template>
+  <template x-if="loading"><div class="stack"><div class="skeleton" style="height:56px"></div><div class="card skeleton" style="height:300px"></div></div></template>
+
+  <template x-if="detail">
+    <div class="stack">
+      <div class="page-head" style="margin-bottom:0">
+        <div class="titles">
+          <div class="crumbs"><a href="#/definitions">Workflows</a> / <span x-text="def.code"></span></div>
+          <h1 x-text="def.name"></h1>
+          <p x-text="def.description || 'No description.'"></p>
+          <div class="chips" style="margin-top:10px">
+            <code class="chip" x-text="def.code"></code>
+            <span class="chip" :class="def.source === 'Code' ? 'warn' : 'success'" x-text="def.source === 'Code' ? 'Defined in code · read-only' : 'Created in dashboard'"></span>
+            <span class="chip" x-show="def.entityType" x-text="def.entityType"></span>
+          </div>
+        </div>
+        <div class="actions">
+          <label class="field" style="flex-direction:row;align-items:center;gap:8px">
+            <span>Version</span>
+            <select style="width:auto" :value="def.version" @change="selectVersion($event.target.value)">
+              <template x-for="v in detail.versions" :key="v.version"><option :value="v.version" x-text="'v' + v.version + (v.version === latest ? ' (latest)' : '')"></option></template>
+            </select>
+          </label>
+          <a class="btn" :href="'#/instances?definition=' + encodeURIComponent(def.code)">View instances</a>
+          <template x-if="!$store.app.meta.readOnly">
+            <span class="actions">
+              <a class="btn" :href="'#/definitions/new?from=' + encodeURIComponent(def.code) + '&v=' + def.version">Duplicate</a>
+              <a class="btn primary" x-show="detail.editable && def.version === latest" :href="'#/definitions/' + encodeURIComponent(def.code) + '/edit'">Edit</a>
+            </span>
+          </template>
+        </div>
+      </div>
+
+      <div class="notice warn" x-show="def.version !== latest">
+        You are viewing an older version. Running instances keep the version they started on.
+      </div>
+
+      <section class="card">
+        <div class="card-head"><h2>Diagram</h2><span class="chip" x-text="'v' + def.version"></span></div>
+        <div class="diagram" x-html="svg"></div>
+      </section>
+
+      <section class="card">
+        <div class="tabs" role="tablist">
+          <button role="tab" :class="{ active: tab === 'transitions' }" @click="tab = 'transitions'" x-text="'Transitions (' + def.transitions.length + ')'"></button>
+          <button role="tab" :class="{ active: tab === 'states' }" @click="tab = 'states'" x-text="'States (' + def.states.length + ')'"></button>
+          <button role="tab" :class="{ active: tab === 'commands' }" @click="tab = 'commands'" x-text="'Commands (' + def.commands.length + ')'"></button>
+        </div>
+
+        <div class="table-wrap" x-show="tab === 'transitions'">
+          <table>
+            <thead><tr><th>From</th><th>Command</th><th>To</th><th>Who can run it</th><th>Rules</th></tr></thead>
+            <tbody>
+              <template x-for="t in def.transitions" :key="t.fromStateCode + t.commandCode + t.toStateCode">
+                <tr>
+                  <td><span class="pill" :class="fmt.typeClass(typeOf(t.fromStateCode))" x-text="nameOf(t.fromStateCode)"></span></td>
+                  <td><strong x-text="commandName(t.commandCode)"></strong></td>
+                  <td><span class="pill" :class="fmt.typeClass(typeOf(t.toStateCode))" x-text="nameOf(t.toStateCode)"></span></td>
+                  <td>
+                    <div class="chips">
+                      <template x-for="r in t.allowedRoles"><span class="chip primary" x-text="r"></span></template>
+                      <span class="muted" x-show="t.allowedRoles.length === 0">Anyone</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="chips">
+                      <template x-for="g in t.guardNames"><span class="chip" x-text="'guard: ' + g"></span></template>
+                      <template x-for="e in t.effectNames"><span class="chip" x-text="'effect: ' + e"></span></template>
+                      <template x-for="a in t.postActionNames"><span class="chip success" x-text="'after: ' + a"></span></template>
+                      <span class="chip warn" x-show="t.requireComment">comment required</span>
+                      <span class="muted" x-show="!t.guardNames.length && !t.effectNames.length && !t.postActionNames.length && !t.requireComment">—</span>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-wrap" x-show="tab === 'states'">
+          <table>
+            <thead><tr><th>State</th><th>Code</th><th>Type</th><th>Outgoing</th><th>On enter</th></tr></thead>
+            <tbody>
+              <template x-for="s in def.states" :key="s.code">
+                <tr>
+                  <td><strong x-text="s.name"></strong></td>
+                  <td><code x-text="s.code"></code></td>
+                  <td><span class="pill" :class="fmt.typeClass(s.type)" x-text="s.type"></span></td>
+                  <td class="muted" x-text="def.transitions.filter(t => t.fromStateCode === s.code).length || 'none'"></td>
+                  <td><div class="chips"><template x-for="a in s.postActionNames"><span class="chip success" x-text="a"></span></template><span class="muted" x-show="!s.postActionNames.length">—</span></div></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-wrap" x-show="tab === 'commands'">
+          <table>
+            <thead><tr><th>Command</th><th>Code</th><th>Description</th><th>Used in</th></tr></thead>
+            <tbody>
+              <template x-for="c in def.commands" :key="c.code">
+                <tr>
+                  <td><strong x-text="c.name"></strong></td>
+                  <td><code x-text="c.code"></code></td>
+                  <td class="muted" x-text="c.description || '—'"></td>
+                  <td class="muted" x-text="fmt.plural(def.transitions.filter(t => t.commandCode === c.code).length, 'transition')"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card" x-show="changes">
+        <div class="card-head"><h2 x-text="'Changes since v' + (def.version - 1)"></h2></div>
+        <div class="diff">
+          <template x-if="changes && changes.lines.length === 0"><span class="muted">No structural changes (only names or descriptions).</span></template>
+          <template x-for="l in (changes ? changes.lines : [])" :key="l.text">
+            <div :class="l.kind"><span x-text="l.kind === 'add' ? '+ ' : '− '"></span><span x-text="l.text"></span></div>
+          </template>
+        </div>
+      </section>
+    </div>
+  </template>
+</div>
