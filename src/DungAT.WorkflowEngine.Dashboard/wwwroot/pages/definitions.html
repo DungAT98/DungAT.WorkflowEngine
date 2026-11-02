@@ -1,0 +1,47 @@
+<div x-data="definitionsPage">
+  <div class="page-head">
+    <div class="titles">
+      <h1>Workflows</h1>
+      <p>Each workflow is a set of states and the commands that move an item between them.</p>
+    </div>
+    <div class="actions" x-show="!$store.app.meta.readOnly">
+      <a class="btn primary" href="#/definitions/new">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        New workflow
+      </a>
+    </div>
+  </div>
+
+  <template x-if="error"><div class="notice danger" x-text="error"></div></template>
+  <template x-if="loading"><div class="grid cards"><template x-for="n in 3"><div class="card skeleton" style="height:190px"></div></template></div></template>
+
+  <template x-if="!loading && !error && items.length === 0">
+    <div class="card empty">
+      <h2>No workflows yet</h2>
+      <p class="muted">Define one in code, or create your first workflow here.</p>
+      <a class="btn primary" href="#/definitions/new" x-show="!$store.app.meta.readOnly">Create a workflow</a>
+    </div>
+  </template>
+
+  <div class="grid cards">
+    <template x-for="d in items" :key="d.code">
+      <a class="card def-card" :href="'#/definitions/' + encodeURIComponent(d.code)">
+        <div class="top">
+          <h3 x-text="d.name"></h3>
+          <span class="chip primary" x-text="'v' + d.version"></span>
+        </div>
+        <div class="chips">
+          <code class="chip" x-text="d.code"></code>
+          <span class="chip" :class="d.source === 'Code' ? 'warn' : 'success'" x-text="d.source === 'Code' ? 'Defined in code' : 'Dashboard'"></span>
+          <span class="chip" x-show="d.entityType" x-text="d.entityType"></span>
+        </div>
+        <p class="desc" x-text="d.description || 'No description.'"></p>
+        <div class="counts">
+          <span><b x-text="d.stateCount"></b> states</span>
+          <span><b x-text="d.commandCount"></b> commands</span>
+          <span><b x-text="d.transitionCount"></b> transitions</span>
+        </div>
+      </a>
+    </template>
+  </div>
+</div>

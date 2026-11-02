@@ -1,0 +1,35 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsPackable)' != 'false' And !$(MSBuildProjectName.EndsWith('.Tests')) And !$(MSBuildProjectName.EndsWith('.Sample'))">
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Authors>David Au</Authors>
+    <Company>DungAT</Company>
+    <Copyright>Copyright (c) DungAT</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>workflow;state-machine;approval;dotnet</PackageTags>
+    <PackageProjectUrl>https://github.com/dungat/DungAT.WorkflowEngine</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/dungat/DungAT.WorkflowEngine</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+    <MinVerDefaultPreReleaseIdentifiers>preview.0</MinVerDefaultPreReleaseIdentifiers>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsPackable)' != 'false' And !$(MSBuildProjectName.EndsWith('.Tests')) And !$(MSBuildProjectName.EndsWith('.Sample'))">
+    <PackageReference Include="MinVer" PrivateAssets="all" />
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+</Project>

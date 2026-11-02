@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Workflow (state machine) engine with fluent builder, validation and in-memory stores.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DungAT.WorkflowEngine.Abstractions\DungAT.WorkflowEngine.Abstractions.csproj" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+</Project>

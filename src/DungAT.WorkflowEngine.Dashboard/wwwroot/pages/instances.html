@@ -1,0 +1,83 @@
+<div x-data="instancesPage">
+  <div class="page-head">
+    <div class="titles">
+      <h1>Instances</h1>
+      <p>Every item currently moving through a workflow.</p>
+    </div>
+    <div class="actions" x-show="!$store.app.meta.readOnly">
+      <button class="btn primary" @click="showStart = !showStart" x-text="showStart ? 'Close' : 'Start instance'"></button>
+    </div>
+  </div>
+
+  <section class="card card-pad" x-show="showStart" x-transition style="margin-bottom:16px">
+    <h2 style="margin-bottom:14px">Start a workflow instance</h2>
+    <form class="form-grid" @submit.prevent="start()">
+      <label class="field"><span>Workflow</span>
+        <select x-model="form.definitionCode" @change="pickDefinition()" required>
+          <option value="" disabled>Choose a workflow…</option>
+          <template x-for="d in definitions" :key="d.code"><option :value="d.code" x-text="d.name + ' (' + d.code + ')'"></option></template>
+        </select>
+      </label>
+      <label class="field"><span>Entity type</span><input x-model="form.entityType" placeholder="e.g. Document" required></label>
+      <label class="field"><span>Entity id</span><input x-model="form.entityId" placeholder="e.g. 42" required></label>
+      <label class="field"><span>Data <span class="hint">(optional JSON available to guards)</span></span><input x-model="form.data" class="mono"></label>
+      <div class="wide actions">
+        <button class="btn primary" :disabled="starting"><span class="spinner" x-show="starting"></span> Start</button>
+        <button type="button" class="btn" @click="showStart = false">Cancel</button>
+      </div>
+    </form>
+  </section>
+
+  <div class="filters">
+    <label class="field search"><span>Search entity id</span><input type="search" x-model="filters.q" @input.debounce.300ms="apply()" placeholder="Type to filter…"></label>
+    <label class="field"><span>Workflow</span>
+      <select x-model="filters.definition" @change="filters.state = ''; apply()">
+        <option value="">All workflows</option>
+        <template x-for="d in definitions" :key="d.code"><option :value="d.code" :selected="d.code === filters.definition" x-text="d.name"></option></template>
+      </select>
+    </label>
+    <label class="field"><span>State</span>
+      <select x-model="filters.state" @change="apply()">
+        <option value="">Any state</option>
+        <template x-for="s in stateOptions" :key="s"><option :value="s" :selected="s === filters.state" x-text="s"></option></template>
+      </select>
+    </label>
+    <label class="field" style="flex:0 0 auto;justify-content:flex-end"><span>&nbsp;</span>
+      <button class="btn" @click="clear()" :disabled="!hasFilters">Clear filters</button>
+    </label>
+  </div>
+
+  <template x-if="error"><div class="notice danger" x-text="error"></div></template>
+
+  <section class="card">
+    <template x-if="loading && !result"><div><template x-for="n in 5"><div class="skeleton sk-row"></div></template></div></template>
+    <template x-if="result && result.items.length === 0">
+      <div class="empty">
+        <h2 x-text="hasFilters ? 'No instances match your filters' : 'No instances yet'"></h2>
+        <p class="muted" x-text="hasFilters ? 'Try a different search or clear the filters.' : 'Start one to see it here.'"></p>
+        <button class="btn" x-show="hasFilters" @click="clear()">Clear filters</button>
+      </div>
+    </template>
+    <div class="table-wrap" x-show="result && result.items.length > 0" :style="loading ? 'opacity:.6' : ''">
+      <table>
+        <thead><tr><th>Entity</th><th>Workflow</th><th>State</th><th>Last update</th><th>Started by</th></tr></thead>
+        <tbody>
+          <template x-for="i in (result ? result.items : [])" :key="i.id">
+            <tr class="link" @click="open(i)" tabindex="0" @keydown.enter="open(i)">
+              <td><div class="entity"><span x-text="i.entityType"></span> <span class="mono" x-text="'#' + i.entityId"></span></div></td>
+              <td><span x-text="i.definitionCode"></span> <span class="chip" x-text="'v' + i.definitionVersion"></span></td>
+              <td><span class="pill" :class="fmt.typeClass(i.stateType)" x-text="i.currentStateName"></span></td>
+              <td><span :title="fmt.dateTime(i.updatedAt)" x-text="fmt.ago(i.updatedAt)"></span></td>
+              <td class="muted" x-text="i.createdBy"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+    <div class="pager" x-show="result && result.total > 0">
+      <span x-text="rangeText"></span>
+      <button class="btn sm" :disabled="filters.page <= 1" @click="go(filters.page - 1)">Previous</button>
+      <button class="btn sm" :disabled="filters.page >= pages" @click="go(filters.page + 1)">Next</button>
+    </div>
+  </section>
+</div>

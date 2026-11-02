@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Models, interfaces and results for the DungAT workflow engine.</Description>
+  </PropertyGroup>
+</Project>

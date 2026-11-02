@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "Sample": {
+      "commandName": "Project",
+      "applicationUrl": "http://localhost:5057",
+      "launchBrowser": true,
+      "launchUrl": "workflow",
+      "environmentVariables": { "ASPNETCORE_ENVIRONMENT": "Development" }
+    }
+  }
+}

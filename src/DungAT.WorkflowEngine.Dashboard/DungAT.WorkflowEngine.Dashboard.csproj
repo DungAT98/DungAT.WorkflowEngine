@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Embedded web dashboard for the DungAT workflow engine: monitor instances, run commands and edit workflow definitions.</Description>
+    <PackageTags>$(PackageTags);dashboard</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\DungAT.WorkflowEngine\DungAT.WorkflowEngine.csproj" />
+    <EmbeddedResource Include="wwwroot\**\*" />
+  </ItemGroup>
+</Project>
