@@ -1,7 +1,7 @@
 name: release
 
 # Manually run from the Actions tab: enter a version (e.g. 1.2.0 or 1.3.0-beta.1).
-# Builds, tests, packs, pushes to nuget.org, then tags vX.Y.Z and creates the GitHub release.
+# Builds, tests, packs, pushes to nuget.org (trusted publishing, no stored API key), then tags vX.Y.Z and creates the GitHub release.
 on:
   workflow_dispatch:
     inputs:
@@ -20,6 +20,9 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # push tag + create GitHub release
+      id-token: write   # OIDC token for NuGet trusted publishing
     steps:
       - name: Validate version
         env:
@@ -58,9 +61,17 @@ jobs:
       - uses: actions/upload-artifact@v4
         with: { name: packages, path: artifacts/* }
 
+      # Trusted publishing: exchange the GitHub OIDC token for a short-lived (1h) NuGet API key.
+      # Requires a trusted publishing policy on nuget.org (owner DungAT98, repo DungAT.WorkflowEngine, workflow release.yml).
+      - name: NuGet login (OIDC -> temp API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }} # nuget.org profile name, NOT email
+
       - name: Publish to nuget.org
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
         run: dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
 
       - name: Create GitHub release
