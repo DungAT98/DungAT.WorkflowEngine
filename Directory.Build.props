@@ -16,8 +16,8 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>workflow;state-machine;approval;dotnet</PackageTags>
-    <PackageProjectUrl>https://github.com/dungat/DungAT.WorkflowEngine</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/dungat/DungAT.WorkflowEngine</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/DungAT98/DungAT.WorkflowEngine</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/DungAT98/DungAT.WorkflowEngine</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
